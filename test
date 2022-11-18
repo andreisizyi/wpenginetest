@@ -1,0 +1,121 @@
+class LangRedirect {
+
+    private $langUrl;
+
+    function __construct() {
+        $this->langFromUrl();
+        $this->init();
+    }
+
+    private function init() {
+        // echo '<br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/>';
+        // if ($this->dectectBots()) {
+        //     var_dump($_SERVER['HTTP_USER_AGENT']);
+        // }
+
+        if (!$this->dectectBots() && !$this->isInnerTransition() && pll_current_language() != 'uk') {
+            if (!$_COOKIE['language']) {
+                setcookie("language", 'uk', time()+86400, "/");
+                $this->redirect('uk');
+            }
+            
+            if ($_COOKIE['language'] != $this->langUrl) {
+                $this->redirect($_COOKIE['language']);
+            }
+        }
+    }
+
+    private function redirect($lang) {
+        $url = pll_the_languages( ['raw' => true, 'echo' => false] )[$lang]['url'] ?? null;
+        if ($url) {
+            wp_redirect($url, 302);
+            die;
+        }
+    }
+
+    private function langFromUrl() {
+        $url = $_SERVER["REQUEST_URI"];
+        $url_array = parse_url($url);
+        $path_array = explode("/", $url_array['path']);
+        $lang_from_url = $path_array[1];
+        $all_langs = array_keys(pll_the_languages( array( 'raw' => 1 ) ));
+        if (!in_array($lang_from_url, $all_langs)) {
+            $lang_from_url = 'uk';
+        }
+        $this->langUrl = $lang_from_url;
+    }
+
+    private function dectectBots() {
+    	$host_name = gethostbyaddr($_SERVER['REMOTE_ADDR']);
+    	if(
+            strpos($host_name, 'google') === false &&
+            strpos($host_name, 'yandex') === false &&
+            !$this->isBotsUserAgents()) {
+    		return false;
+    	} else {
+            return true;
+        }
+    }
+
+    private function isInnerTransition() {
+        if (!empty($_SERVER['HTTP_REFERER']) && 
+            strpos($_SERVER['HTTP_REFERER'], $_SERVER['SERVER_NAME']) !== false) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    private function isBotsUserAgents() {
+        $bots_about = [
+            'APIs-Google',
+            'AdsBot-Google-Mobile',
+            'AdsBot-Google-Mobile',
+            'AdsBot-Google',
+            'Mediapartners-Google',
+            'Googlebot',
+            'AdsBot-Google-Mobile-Apps',
+            'FeedFetcher-Google',
+            'Google-Read-Aloud',
+            'DuplexWeb-Google',
+            'googleweblight',
+            'Storebot-Google',
+            'bingbot',
+            'BingPreview',
+            'Applebot',
+            'applebot',
+            'google',
+            'Google',
+            'AdsBot',
+            'AdSense',
+            'Googlebot Images',
+            'Googlebot News',
+            'Googlebot Video',
+            'Yandex Bot',
+            'Yandex Mobile',
+            'Yandex Images',
+            'Yandex Video',
+            'Yandex Media',
+            'Yandex News',
+            'Yandex Blogs',
+            'Yandex'
+        ];
+        $bots = [
+            'Apple'
+        ];
+        foreach ($bots as $bot) {
+            if ($_SERVER['HTTP_USER_AGENT'] == $bot) {
+                return true;
+            }
+        }
+        foreach ($bots_about as $bot) {
+            if (strpos($_SERVER['HTTP_USER_AGENT'], $bot) !== false) {
+                return true;
+            }
+        }
+    }
+}
+
+add_action( 'template_redirect', function () {
+    new LangRedirect();
+} );
